@@ -73,7 +73,7 @@ public class PerformanceBenchmark {
         log.info("\nPerformance Ratio (Chronicle/Standard):");
         log.info("  Write: {:.2f}x", (double) concurrentHashMapResult.writeOps / chronicleResult.writeOps);
         log.info("  Read: {:.2f}x", (double) concurrentHashMapResult.readOps / chronicleResult.readOps);
-        log.info("  Memory: {:.2f}x", (double) concurrentHashMapResult.memoryUsed / chronicleResult.memoryUsed);
+        log.info("  Memory: {:.2f}x", (double) concurrentHashMapResult.memoryUsed / Math.max(chronicleResult.memoryUsed, 1));
     }
     
     private BenchmarkResult benchmarkChronicleMap() throws IOException {
@@ -353,6 +353,7 @@ public class PerformanceBenchmark {
         try (ChronicleMap<Long, User> map = ChronicleMap
                 .of(Long.class, User.class)
                 .entries(testSize)
+                .averageValueSize(256)
                 .createPersistedTo(chronicleFile)) {
             
             for (int i = 0; i < testSize; i++) {
@@ -367,6 +368,7 @@ public class PerformanceBenchmark {
         try (ChronicleMap<Long, User> map = ChronicleMap
                 .of(Long.class, User.class)
                 .entries(testSize)
+                .averageValueSize(256)
                 .createPersistedTo(chronicleFile)) {
             
             for (long i = 0; i < testSize; i++) {

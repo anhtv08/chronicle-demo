@@ -209,6 +209,7 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <configuration>
                             <mainClass>com.demo.map.ChronicleMapDemo</mainClass>
+
                         </configuration>
                     </plugin>
                 </plugins>
@@ -224,6 +225,8 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <configuration>
                             <mainClass>com.demo.queue.ChronicleQueueDemo</mainClass>
+
+
                         </configuration>
                     </plugin>
                 </plugins>
@@ -239,6 +242,7 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <configuration>
                             <mainClass>com.demo.benchmark.PerformanceBenchmark</mainClass>
+
                         </configuration>
                     </plugin>
                 </plugins>

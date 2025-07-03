@@ -94,6 +94,7 @@ public class ChronicleMapDemo {
         try (ChronicleMap<String, MarketData> marketDataMap = ChronicleMap
                 .of(String.class, MarketData.class)
                 .entries(INITIAL_CAPACITY)
+                .averageKeySize(20)  // String keys like "STOCK_123_456789"
                 .averageValueSize(200)
                 .createPersistedTo(new File(DATA_DIR, "market-data.dat"))) {
             
@@ -211,6 +212,7 @@ public class ChronicleMapDemo {
         try (ChronicleMap<Long, User> userMap = ChronicleMap
                 .of(Long.class, User.class)
                 .entries(1000)
+                .averageValueSize(256)
                 .createPersistedTo(persistentFile)) {
             
             for (int i = 1; i <= 100; i++) {
@@ -226,6 +228,7 @@ public class ChronicleMapDemo {
         try (ChronicleMap<Long, User> userMap = ChronicleMap
                 .of(Long.class, User.class)
                 .entries(1000)
+                .averageValueSize(256)
                 .createPersistedTo(persistentFile)) {
             
             log.info("Read {} users from persistent storage", userMap.size());
@@ -247,6 +250,7 @@ public class ChronicleMapDemo {
         try (ChronicleMap<String, Long> counterMap = ChronicleMap
                 .of(String.class, Long.class)
                 .entries(1000)
+                .averageValueSize(8)  // Long values are 8 bytes
                 .createPersistedTo(new File(DATA_DIR, "counters.dat"))) {
             
             // Initialize counters

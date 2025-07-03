@@ -31,30 +31,47 @@ DEMO_TYPE=${1:-all}
 # Performance-optimized JVM arguments
 JVM_ARGS=(
     # Memory settings
-    "-Xms1g"                          # Initial heap size
-    "-Xmx2g"                          # Maximum heap size
+    "-Xmx4g"
+    "-Xms4g"
+    "-XX:+UseG1GC"
+    "-XX:MaxGCPauseMillis=100"
+
+    # Chronicle Map module system fixes
+    "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED"
+    "--add-opens=java.base/java.io=ALL-UNNAMED"
+    "--add-opens=java.base/java.util=ALL-UNNAMED"
+    "--add-opens=java.base/java.nio=ALL-UNNAMED"
+    "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+    "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
+    "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
     
-    # GC tuning for low latency
-    "-XX:+UseG1GC"                    # Use G1 garbage collector
-    "-XX:MaxGCPauseMillis=10"         # Target max GC pause time
-    "-XX:G1HeapRegionSize=16m"        # G1 heap region size
-    
-    # Performance optimizations
-    "-XX:+UnlockExperimentalVMOptions"
-    "-XX:+UseLargePages"              # Use large memory pages (if available)
-    "-XX:+AlwaysPreTouch"             # Pre-touch memory pages
-    "-XX:+OptimizeStringConcat"       # Optimize string concatenation
-    
-    # Compilation optimizations
-    "-XX:+TieredCompilation"          # Enable tiered compilation
-    "-XX:CompileThreshold=1000"       # Lower compilation threshold
-    
-    # System properties for Chronicle
-    "-Dchronicle.analytics.disable=true"  # Disable Chronicle analytics
-    "-Dfile.encoding=UTF-8"               # Set file encoding
-    
-    # Server VM
-    "-server"                         # Server VM
+    # JDK Compiler module access for Chronicle
+    "--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
+    "--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED"
+
+    "--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED"
+    "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
+    "--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED"
+    "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED"
+    "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"
+    "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED"
+    "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED"
+
+    # macOS specific settings
+    "-Djava.awt.headless=true"
+    "-Dfile.encoding=UTF-8"
+    "-Dapple.laf.useScreenMenuBar=false"
+
+    # Disable warnings about illegal access
+    "-Djdk.internal.lambda.disableEagerInitialization=true"
 )
 
 # Check if JAR exists, build if necessary
