@@ -65,7 +65,7 @@ variable "container_port" {
 variable "health_check_path" {
   description = "Health check path"
   type        = string
-  default     = "/health"
+  default     = "/"
 }
 
 # ECR Configuration

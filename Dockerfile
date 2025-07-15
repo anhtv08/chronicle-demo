@@ -52,17 +52,31 @@ USER root
 RUN yum install -y nc && yum clean all
 USER appuser
 
+# Create a simple health check script
+RUN echo '#!/bin/bash' > /app/health-server.sh && \
+    echo 'while true; do' >> /app/health-server.sh && \
+    echo '  echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 44\r\n\r\n{\"status\":\"UP\",\"service\":\"chronicle-demo\"}" | nc -l -p 8080 -q 1' >> /app/health-server.sh && \
+    echo 'done' >> /app/health-server.sh && \
+    chmod +x /app/health-server.sh
+
+# Create startup script
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting Chronicle Demo..."' >> /app/start.sh && \
+    echo '# Start health check server in background' >> /app/start.sh && \
+    echo '/app/health-server.sh &' >> /app/start.sh && \
+    echo 'HEALTH_PID=$!' >> /app/start.sh && \
+    echo 'echo "Health check server started on port 8080 (PID: $HEALTH_PID)"' >> /app/start.sh && \
+    echo '# Run the main application' >> /app/start.sh && \
+    echo 'echo "Starting Chronicle application..."' >> /app/start.sh && \
+    echo 'java $JAVA_OPTS -jar app.jar all' >> /app/start.sh && \
+    echo 'APP_EXIT_CODE=$?' >> /app/start.sh && \
+    echo '# Clean up health server on exit' >> /app/start.sh && \
+    echo 'kill $HEALTH_PID 2>/dev/null || true' >> /app/start.sh && \
+    echo 'exit $APP_EXIT_CODE' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Health check endpoint
 EXPOSE 8080
 
-# Add health check script
-RUN echo '#!/bin/bash' > /app/start.sh && \
-    echo 'echo "Starting Chronicle Demo with health endpoint..."' >> /app/start.sh && \
-    echo '# Start simple health check server in background' >> /app/start.sh && \
-    echo 'while true; do echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK" | nc -l -p 8080 -q 1; done &' >> /app/start.sh && \
-    echo '# Run the main application' >> /app/start.sh && \
-    echo 'java $JAVA_OPTS -jar app.jar all' >> /app/start.sh && \
-    chmod +x /app/start.sh
-
-# Default command runs all demos with health check
+# Default command
 CMD ["/app/start.sh"]
