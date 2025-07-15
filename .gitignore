@@ -62,3 +62,8 @@ test-output/
 # JVM crash logs
 hs_err_pid*
 replay_pid*
+
+# docker
+
+docker-data/
+docker.dmg

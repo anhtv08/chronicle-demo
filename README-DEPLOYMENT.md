@@ -1,142 +1,382 @@
-# Chronicle Demo - Deployment Guide
+# Chronicle Demo - AWS Deployment Guide
 
-## 🚧 Current Status
+This guide provides step-by-step instructions for deploying the Chronicle Map/Queue demo application to AWS using Infrastructure as Code (Terraform) and containerized deployment (ECS Fargate).
 
-This Chronicle Map/Queue demo project has been successfully created with comprehensive examples and benchmarks. However, there are known compatibility issues with Java 17+ module system and Chronicle libraries version 3.25ea0/5.25ea0.
+## 🏗️ Architecture Overview
 
-## ✅ What's Included
+The deployment creates a production-ready, scalable architecture on AWS:
 
-### Complete Project Structure
-- **Lombok-enhanced Models**: User, Order, MarketData, Trade with full annotations
-- **Chronicle Map Demos**: Performance testing, persistence, concurrency
-- **Chronicle Queue Demos**: Producer-consumer patterns, high throughput
-- **Performance Benchmarks**: Comparison with standard Java collections
-- **Comprehensive Documentation**: README, configuration files, scripts
+### Infrastructure Components
 
-### Key Features Implemented
-- ✅ Maven project with all dependencies configured
-- ✅ Lombok annotations for reduced boilerplate
-- ✅ Chronicle Map demonstrations with off-heap storage
-- ✅ Chronicle Queue messaging patterns
-- ✅ Performance benchmarking framework
-- ✅ Unit tests with JUnit 5
-- ✅ Optimized run scripts
-- ✅ Complete documentation
+- **VPC**: Custom VPC with public and private subnets across multiple AZs
+- **ECS Fargate**: Serverless container platform for running the application
+- **Application Load Balancer**: Distributes traffic across multiple container instances
+- **EFS**: Persistent storage for Chronicle data files
+- **ECR**: Container registry for Docker images
+- **CloudWatch**: Centralized logging and monitoring
+- **Auto Scaling**: Automatic scaling based on CPU and memory utilization
 
-## 🔧 Deployment Options
+### Architecture Diagram
 
-### Option 1: Use with Java 11
+```
+Internet Gateway
+       |
+   [ALB] (Public Subnets)
+       |
+   [ECS Fargate] (Private Subnets)
+       |
+   [EFS] (Persistent Storage)
+```
+
+## 📋 Prerequisites
+
+### Required Tools
+
+1. **AWS CLI** (v2.x recommended)
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install awscli
+   
+   # Or download from: https://aws.amazon.com/cli/
+   ```
+
+2. **Terraform** (v1.0+)
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install terraform
+   
+   # Or download from: https://www.terraform.io/downloads
+   ```
+
+3. **Docker** (for building images)
+   ```bash
+   # Install Docker Desktop
+   # https://www.docker.com/products/docker-desktop/
+   ```
+
+4. **Maven** (for building the Java application)
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install maven
+   ```
+
+### AWS Configuration
+
+1. **Configure AWS Credentials**
+   ```bash
+   aws configure
+   ```
+   
+   You'll need:
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - Default region (e.g., `us-west-2`)
+   - Default output format (`json`)
+
+2. **Verify AWS Access**
+   ```bash
+   aws sts get-caller-identity
+   ```
+
+## 🚀 Deployment Steps
+
+### Step 1: Clone and Prepare the Repository
+
 ```bash
-# Install and use Java 11
-sdk install java 11.0.19-tem
-sdk use java 11.0.19-tem
-
-# Compile and run
-mvn clean package
-java -jar target/chronicle-demo-1.0.0.jar
+git clone <repository-url>
+cd chronicle-demo
 ```
 
-### Option 2: Java 17+ with Module Flags
+### Step 2: Deploy Infrastructure
+
 ```bash
-# Add required module access flags
-java --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
-     --add-opens java.base/java.nio=ALL-UNNAMED \
-     --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
-     --add-opens java.base/java.lang=ALL-UNNAMED \
-     --add-exports java.base/jdk.internal.ref=ALL-UNNAMED \
-     --add-exports java.base/jdk.internal.misc=ALL-UNNAMED \
-     -jar target/chronicle-demo-1.0.0.jar
+# Make deployment scripts executable
+chmod +x deploy/*.sh
+
+# Deploy AWS infrastructure
+./deploy/deploy-infrastructure.sh
 ```
 
-### Option 3: Use Stable Chronicle Versions
-Update `pom.xml` to use stable releases:
-```xml
-<chronicle.map.version>3.24.4</chronicle.map.version>
-<chronicle.queue.version>5.24.4</chronicle.queue.version>
+This script will:
+- Initialize Terraform
+- Validate the configuration
+- Show you the deployment plan
+- Ask for confirmation
+- Deploy all AWS resources
+
+**Expected deployment time: 5-10 minutes**
+
+### Step 3: Build and Push Docker Image
+
+```bash
+# Build application and push to ECR
+./deploy/build-and-push.sh
 ```
 
-## 📝 Demo Components
+This script will:
+- Build the Maven application
+- Create a Docker image
+- Create ECR repository (if needed)
+- Push the image to ECR
+- Tag with both `latest` and timestamp
 
-### 1. Models (src/main/java/com/demo/model/)
-```java
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
-public class User extends SelfDescribingMarshallable {
-    private Long userId;
-    private String username;
-    // ... with Lombok-generated methods
+### Step 4: Wait for Service Deployment
+
+After pushing the image, ECS will automatically deploy the new version:
+
+```bash
+# Monitor the deployment
+aws ecs describe-services \
+  --cluster chronicle-demo-cluster \
+  --services chronicle-demo-service \
+  --query 'services[0].deployments'
+```
+
+### Step 5: Access the Application
+
+Once deployed, get the load balancer URL:
+
+```bash
+cd terraform
+terraform output load_balancer_url
+```
+
+The application will be available at: `http://<load-balancer-dns>/`
+
+## 📊 Monitoring and Management
+
+### View Application Logs
+
+```bash
+# Stream logs in real-time
+aws logs tail /ecs/chronicle-demo --follow
+
+# View specific log stream
+aws logs describe-log-streams --log-group-name /ecs/chronicle-demo
+```
+
+### Monitor ECS Service
+
+```bash
+# Check service status
+aws ecs describe-services \
+  --cluster chronicle-demo-cluster \
+  --services chronicle-demo-service
+
+# View running tasks
+aws ecs list-tasks \
+  --cluster chronicle-demo-cluster \
+  --service-name chronicle-demo-service
+```
+
+### Scale the Service
+
+```bash
+# Scale to 3 instances
+aws ecs update-service \
+  --cluster chronicle-demo-cluster \
+  --service chronicle-demo-service \
+  --desired-count 3
+```
+
+### Force New Deployment
+
+```bash
+# Deploy latest image version
+aws ecs update-service \
+  --cluster chronicle-demo-cluster \
+  --service chronicle-demo-service \
+  --force-new-deployment
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+The application supports these environment variables:
+
+- `JAVA_OPTS`: JVM options for Chronicle optimization
+- `AWS_REGION`: AWS region for services
+- `LOG_LEVEL`: Application log level
+
+### Terraform Variables
+
+Key variables in `terraform/variables.tf`:
+
+```hcl
+# Scaling configuration
+variable "ecs_desired_count" {
+  default = 2  # Number of running tasks
+}
+
+variable "ecs_task_cpu" {
+  default = 1024  # CPU units (1 vCPU = 1024)
+}
+
+variable "ecs_task_memory" {
+  default = 2048  # Memory in MB
+}
+
+# Auto scaling thresholds
+variable "target_cpu_utilization" {
+  default = 70  # Scale up when CPU > 70%
 }
 ```
 
-### 2. Chronicle Map Demo
-- Basic CRUD operations
-- Performance benchmarking
-- Persistence testing
-- Concurrency validation
-- Memory efficiency analysis
+### Custom Deployment
 
-### 3. Chronicle Queue Demo
-- Producer-Consumer patterns
-- High throughput testing
-- Multiple consumers
-- Persistence validation
+For custom configurations:
 
-### 4. Performance Benchmarks
-- Chronicle vs Standard Collections
-- Memory usage comparisons
-- Throughput measurements
-- Latency analysis
+```bash
+cd terraform
 
-## 🎯 Learning Objectives Achieved
-
-1. **Project Setup**: Complete Maven configuration with Chronicle dependencies
-2. **Lombok Integration**: Reduced boilerplate with annotations
-3. **Chronicle Map**: Off-heap storage and persistence patterns
-4. **Chronicle Queue**: Ultra-fast messaging implementation
-5. **Performance Testing**: Comprehensive benchmark framework
-6. **Best Practices**: Optimized configurations and deployment scripts
-
-## 📊 Expected Performance
-
-When running successfully:
-- **Chronicle Map**: 5-10M operations/second
-- **Chronicle Queue**: 8-15M messages/second
-- **Memory Efficiency**: 50%+ reduction in heap usage
-- **Latency**: Sub-microsecond processing times
-
-## 🔧 Troubleshooting
-
-### Module System Issues (Java 17+)
-Chronicle libraries use reflection extensively and require module access permissions.
-
-### Large Pages Warning
+# Deploy with custom variables
+terraform apply \
+  -var="ecs_desired_count=3" \
+  -var="ecs_task_memory=4096" \
+  -var="aws_region=us-east-1"
 ```
--XX:+UseLargePages not supported in this VM
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **ECS Tasks Failing to Start**
+   ```bash
+   # Check task definition
+   aws ecs describe-task-definition --task-definition chronicle-demo-task
+   
+   # Check stopped tasks
+   aws ecs describe-tasks \
+     --cluster chronicle-demo-cluster \
+     --tasks $(aws ecs list-tasks --cluster chronicle-demo-cluster --desired-status STOPPED --query 'taskArns[0]' --output text)
+   ```
+
+2. **Load Balancer Health Checks Failing**
+   ```bash
+   # Check target group health
+   aws elbv2 describe-target-health \
+     --target-group-arn $(aws elbv2 describe-target-groups --names chronicle-demo-tg --query 'TargetGroups[0].TargetGroupArn' --output text)
+   ```
+
+3. **Image Pull Errors**
+   ```bash
+   # Verify ECR repository
+   aws ecr describe-repositories --repository-names chronicle-demo
+   
+   # Check image exists
+   aws ecr list-images --repository-name chronicle-demo
+   ```
+
+### Debug Commands
+
+```bash
+# Get ECS service events
+aws ecs describe-services \
+  --cluster chronicle-demo-cluster \
+  --services chronicle-demo-service \
+  --query 'services[0].events'
+
+# Check CloudWatch logs
+aws logs describe-log-groups --log-group-name-prefix /ecs/chronicle-demo
+
+# View EFS mount targets
+aws efs describe-mount-targets \
+  --file-system-id $(terraform output -raw efs_file_system_id)
 ```
-This is normal on macOS and doesn't affect functionality.
 
-### File Permission Errors
-Ensure write permissions to the project directory for Chronicle data files.
+## 💰 Cost Optimization
 
-## 📚 Next Steps
+### Estimated Monthly Costs (us-west-2)
 
-1. **Try with Java 11**: Most compatible version for Chronicle
-2. **Explore Code**: Review the implemented demos and benchmarks
-3. **Modify Examples**: Adapt the patterns to your use cases
-4. **Performance Testing**: Run benchmarks on your target hardware
-5. **Production Deployment**: Apply learnings to real projects
+- **ECS Fargate**: ~$30-50/month (2 tasks, 1 vCPU, 2GB RAM)
+- **Application Load Balancer**: ~$20/month
+- **EFS**: ~$5-10/month (depends on data size)
+- **NAT Gateway**: ~$45/month (2 AZs)
+- **CloudWatch Logs**: ~$5/month
+- **ECR**: ~$1/month
 
-## 🎉 Success Metrics
+**Total: ~$105-130/month**
 
-This demo project successfully demonstrates:
-- ✅ Complete Chronicle Map/Queue integration
-- ✅ Lombok annotation usage
-- ✅ Performance benchmark framework
-- ✅ Production-ready project structure
-- ✅ Comprehensive documentation
-- ✅ Optimized configuration files
+### Cost Reduction Tips
 
-The project serves as an excellent learning resource and template for Chronicle-based applications, even with the current runtime compatibility challenges.
+1. **Use Fargate Spot** (50-70% savings):
+   ```hcl
+   # In terraform/ecs.tf
+   capacity_providers = ["FARGATE_SPOT"]
+   ```
+
+2. **Single AZ Deployment** (save NAT Gateway costs):
+   ```hcl
+   # In terraform/variables.tf
+   public_subnet_cidrs  = ["10.0.1.0/24"]
+   private_subnet_cidrs = ["10.0.10.0/24"]
+   ```
+
+3. **Reduce Log Retention**:
+   ```hcl
+   variable "log_retention_days" {
+     default = 3  # Instead of 7
+   }
+   ```
+
+## 🧹 Cleanup
+
+### Destroy Infrastructure
+
+```bash
+cd terraform
+
+# Destroy all resources
+terraform destroy
+
+# Confirm when prompted
+```
+
+### Manual Cleanup (if needed)
+
+```bash
+# Delete ECR images
+aws ecr batch-delete-image \
+  --repository-name chronicle-demo \
+  --image-ids imageTag=latest
+
+# Empty and delete S3 buckets (if any)
+# Delete CloudWatch log groups
+aws logs delete-log-group --log-group-name /ecs/chronicle-demo
+```
+
+## 🔐 Security Considerations
+
+### Network Security
+- Private subnets for ECS tasks
+- Security groups with minimal required access
+- ALB in public subnets only
+
+### Data Security
+- EFS encryption at rest and in transit
+- ECR image scanning enabled
+- IAM roles with least privilege
+
+### Monitoring
+- CloudWatch container insights enabled
+- Application and infrastructure logs centralized
+- Auto scaling based on metrics
+
+## 📚 Additional Resources
+
+- [AWS ECS Documentation](https://docs.aws.amazon.com/ecs/)
+- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Chronicle Map Documentation](https://github.com/OpenHFT/Chronicle-Map)
+- [Chronicle Queue Documentation](https://github.com/OpenHFT/Chronicle-Queue)
+
+## 🆘 Support
+
+For issues with:
+- **AWS Infrastructure**: Check CloudFormation events and CloudWatch logs
+- **Application**: Review ECS task logs and health check endpoints
+- **Terraform**: Validate configuration and check state file
 
 ---
 
-**Note**: This is a common issue with Chronicle libraries and modern Java versions. The codebase is production-ready and will work correctly once the module system compatibility is resolved in future Chronicle releases or with proper JVM flags.
+**Note**: This deployment is configured for development/testing. For production use, consider additional security hardening, monitoring, and backup strategies.
