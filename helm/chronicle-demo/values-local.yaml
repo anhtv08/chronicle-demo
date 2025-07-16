@@ -1,0 +1,119 @@
+# Local development values for chronicle-demo
+# This overrides the default values.yaml for local testing
+
+# Use local Docker image
+image:
+  registry: ""
+  repository: chronicle-demo
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Disable OpenShift-specific features for local testing
+openshift:
+  route:
+    enabled: false
+  scc:
+    create: false
+
+# Reduce resource requirements for local testing
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Single replica for local testing
+deployment:
+  replicaCount: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+# Disable security context for local testing (Docker Desktop)
+deployment:
+  securityContext: {}
+  containerSecurityContext: {}
+
+# Use emptyDir for local testing (no persistent storage needed)
+persistence:
+  enabled: false
+
+# Disable autoscaling for local testing
+autoscaling:
+  enabled: false
+
+# Disable pod disruption budget for single replica
+podDisruptionBudget:
+  enabled: false
+
+# Disable network policy for local testing
+networkPolicy:
+  enabled: false
+
+# Disable monitoring for local testing
+monitoring:
+  enabled: false
+
+# Simplified health checks for faster startup
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 8080
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  startupProbe:
+    httpGet:
+      path: /
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 20
+
+# Simplified JVM options for local testing
+jvm:
+  opts: >-
+    -Xmx1g -Xms512m -XX:+UseG1GC
+    --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+    --add-opens java.base/java.nio=ALL-UNNAMED
+    --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+    --add-opens java.base/java.lang=ALL-UNNAMED
+    --add-opens java.base/java.util=ALL-UNNAMED
+    --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+    --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+
+# Service configuration for local access
+service:
+  type: NodePort
+  port: 8080
+  targetPort: 8080
+
+# Remove pod annotations that are OpenShift-specific
+podAnnotations: {}
+
+# Simplified affinity rules
+affinity: {}
+
+# No node selector for local testing
+nodeSelector: {}
+
+# No tolerations for local testing
+tolerations: []
